@@ -612,8 +612,8 @@ function readLeftThumbstick() {
         if (!source.gamepad || !source.gamepad.axes) continue;
 
         const axes = source.gamepad.axes;
-        const rawX = axes.length > 0 ? axes[0] : 0;
-        const rawY = axes.length > 1 ? axes[1] : 0;
+        const rawX = axes.length > 0 ? axes[2] : 0;
+        const rawY = axes.length > 1 ? axes[3] : 0;
 
         // Deadzone on the (x, y) magnitude, not per-axis, so diagonal input
         // near the deadzone edge isn't biased toward one axis.
