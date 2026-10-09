@@ -1,51 +1,42 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MAC0623 — A2: VR Port and Comparison</title>
-  <link rel="stylesheet" href="./a2.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAC0623 — Assignment 3 — Navigation in VR</title>
+    <link rel="stylesheet" href="a2.css">
 </head>
 <body>
-
-  <!-- HUD — same field IDs as A1, with the condition selector expanded
-       to cover the desktop baseline plus the three VR conditions. -->
-  <div id="hud">
-    <label>Participant <input id="participantId" value="P01" size="4" /></label>
-    <label>Condition
-      <select id="mappingSelect">
-        <option value="1">1 — Desktop baseline (A1 mode-switched)</option>
-        <option value="2">2 — Desktop alt (A1 own, stub)</option>
-        <option value="vr-grab">VR — Direct grab</option>
-        <option value="vr-trackball">VR — Trackball</option>
-        <option value="vr-gizmo">VR — Gizmo</option>
-      </select>
-    </label>
-    <span id="trialCount">Trial 1</span>
-    <button id="confirmBtn">Confirm (Enter)</button>
-    <button id="downloadBtn">Download CSV</button>
-    <span id="status">—</span>
-  </div>
-
-  <div id="help">
-    <b>Desktop-1:</b> mouse drag = translate/rotate, <code>Space</code> toggles, wheel = depth/roll.<br />
-    <b>VR-grab:</b> trigger to attach the cube, release to drop it.<br />
-    <b>VR-trackball:</b> trigger held → cube translates directly with hand and rotates at
-    <code>TRACKBALL_ROTATION_GAIN</code>× the controller's rotation delta.<br />
-    <b>VR-gizmo:</b> point with the controller at a coloured arrow (translate) or ring
-    (rotate); trigger to lock that axis, release to let go.<br />
-    Tolerance constants, task logic and CSV fields are shared across every condition.
-  </div>
-
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    <div id="ui">
+        <h1>A3 — Navigation in VR</h1>
+        <div class="row">
+            <label for="participantId">Participant:</label>
+            <input type="text" id="participantId" value="P01" placeholder="P01">
+        </div>
+        <div class="row">
+            <label for="techniqueSelect">Technique:</label>
+            <select id="techniqueSelect">
+                <option value="1">1 — WIM</option>
+                <option value="2">2 — Joystick</option>
+            </select>
+        </div>
+        <div class="row">
+            <span id="trialCount">Trial 1</span>
+        </div>
+        <div class="row">
+            <button id="confirmBtn">Confirm (Enter)</button>
+            <button id="downloadBtn">Download CSV</button>
+        </div>
+        <div id="status">Ready</div>
+    </div>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
     }
-  }
-  </script>
-  <script type="module" src="./main.js"></script>
+    </script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
-

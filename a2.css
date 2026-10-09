@@ -1,113 +1,48 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; font-family: system-ui, sans-serif; background: #1a1a1a; }
 
-lab10.css
-
-/* ============================================================
-   MAC0623 — Class 10: WebXR Retrofit of A1 — styles
-   ============================================================
-   Provided, identical in structure to the A1 starter's a1.css.
-   Covers the fixed HUD bar (top), the help caption (bottom-left),
-   and the full-bleed canvas/VR-entry button. You don't need to
-   touch this file for today's retrofit; only extend it if your
-   WebXR code adds new HUD elements, and keep the existing
-   selectors (#hud, #status, etc.) intact — main.js reads them by
-   those exact IDs.
-   ============================================================ */
-
-html, body {
-  margin: 0;
-  height: 100%;
-  overflow: hidden;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #111;
+#ui {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 100;
+    background: rgba(20, 20, 26, 0.9);
+    color: #eee;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    min-width: 240px;
+    border: 1px solid #333;
 }
-
-/* ---- HUD bar (top): participant ID, mapping select, trial
-   counter, confirm/download buttons, live status pill ---- */
-
-#hud {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: center;
-  padding: 8px 14px;
-  background: rgba(15, 15, 15, 0.88);
-  color: #eee;
-  font-size: 13px;
-  z-index: 10;
-  border-bottom: 1px solid #333;
+#ui h1 { font-size: 15px; margin-bottom: 10px; color: #8cf; }
+.row { margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.row label { min-width: 80px; color: #aaa; font-size: 12px; }
+.row input, .row select {
+    background: #2a2a30;
+    color: #eee;
+    border: 1px solid #444;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 100%;
 }
-
-#hud label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-
-#hud input, #hud select {
-  font-size: 13px;
-  background: #222;
-  color: #eee;
-  border: 1px solid #444;
-  border-radius: 3px;
-  padding: 2px 4px;
+.row button {
+    background: #3a5a8a;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    flex: 1;
 }
-
-#hud button {
-  font-size: 13px;
-  padding: 4px 12px;
-  cursor: pointer;
-  background: #2a5;
-  color: #fff;
-  border: none;
-  border-radius: 3px;
-}
-
-#hud button:hover { background: #3c6; }
-
-#downloadBtn { background: #457; }
-#downloadBtn:hover { background: #568; }
-
-/* Live delta-position / delta-orientation readout, same as A1. Turns
-   green when both are within tolerance — a hint, not a gate. */
+.row button:hover { background: #4a6a9a; }
 #status {
-  margin-left: auto;
-  font-weight: 600;
-  padding: 2px 10px;
-  border-radius: 3px;
-  background: #333;
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: #222;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #ccc;
 }
-
-#status.in-tolerance { background: #274; color: #9f9; }
-#status.in-vr { background: #274; color: #9f9; }
-
-/* ---- Help caption (bottom-left) ---- */
-
-#help {
-  position: fixed;
-  bottom: 8px; left: 14px;
-  color: #888;
-  font-size: 12px;
-  z-index: 10;
-  max-width: 480px;
-  line-height: 1.4;
-}
-
-#help code {
-  background: #222;
-  padding: 0 3px;
-  border-radius: 2px;
-}
-
-/* ---- three.js canvas ---- */
-
-canvas { display: block; }
-
-/* ---- VRButton (injected by three.js at runtime, once the retrofit adds
-   it) ---- three.js's VRButton.createButton() ships its own inline
-   styles, so this is only a light touch-up to keep it visually
-   consistent with the HUD. */
-
-#VRButton {
-  font-family: system-ui, -apple-system, sans-serif !important;
-}
-
-
-
+#status.in-tolerance { background: #1e4630; color: #9f9; }
