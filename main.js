@@ -622,7 +622,7 @@ function readLeftThumbstick() {
 
         // Flip Y so pushing the stick up (negative rawY on most hardware)
         // produces forward motion.
-        return { x: rawX, y: -rawY };
+        return { x: -rawX, y: -rawY };
     }
     return { x: 0, y: 0 };
 }
