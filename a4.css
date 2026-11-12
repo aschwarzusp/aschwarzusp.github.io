@@ -1,0 +1,338 @@
+/* Mortal Kombat–flavoured theme for MAC0623 A4
+   - Display font: Black Ops One (headings, buttons, HUD messages)
+   - Body font:    Rajdhani (HUD text, panel copy, form fields)
+   Imported here so index.html does not need a <link>. */
+
+@import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;600;700&display=swap');
+
+/* ============================================================
+   Base
+   ============================================================ */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  background: #050505;
+  color: #f2e6c4;
+  font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: .04em;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ============================================================
+   dom-overlay root — behaviour unchanged
+   ============================================================ */
+#overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ============================================================
+   HUD
+   ============================================================ */
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  color: #f7e9b0;
+  background:
+    linear-gradient(180deg, rgba(32, 2, 6, .82), rgba(0, 0, 0, .82));
+  border: 1px solid rgba(200, 30, 58, .55);
+  border-left: 4px solid #c81e3a;
+  padding: 8px 12px;
+  border-radius: 3px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: pre-line;             /* JS writes multi-line HUD text */
+  text-shadow: 0 0 6px rgba(255, 60, 90, .65), 0 1px 0 #000;
+  box-shadow:
+    inset 0 0 18px rgba(200, 30, 58, .20),
+    0 2px 10px rgba(0, 0, 0, .7);
+  pointer-events: none;
+}
+
+/* ============================================================
+   Flash message
+   ============================================================ */
+#msg {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 80vw;
+  color: #ffe27a;
+  background: linear-gradient(180deg, rgba(46, 2, 8, .94), rgba(0, 0, 0, .94));
+  border: 2px solid #c81e3a;
+  border-radius: 3px;
+  padding: 12px 22px;
+  font-family: 'Black Ops One', 'Impact', 'Arial Black', sans-serif;
+  font-size: 20px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-align: center;
+  text-shadow:
+    0 0 10px rgba(255, 60, 90, .85),
+    0 2px 0 #000;
+  box-shadow:
+    0 0 26px rgba(200, 30, 58, .65),
+    inset 0 0 20px rgba(255, 60, 90, .28);
+  display: none;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Button row (bottom of the AR view)
+   ============================================================ */
+#controls {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 0 10px;
+}
+
+/* ============================================================
+   Buttons — metallic red octagon, gold inset frame
+   ============================================================ */
+button {
+  position: relative;
+  font-family: 'Black Ops One', 'Impact', 'Arial Black', sans-serif;
+  font-size: 15px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 14px 22px;
+  color: #ffe27a;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .16), transparent 45%),
+    linear-gradient(180deg, #2b060b 0%, #7d1120 45%, #3b060c 100%);
+  border: none;
+  border-radius: 0;
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px),
+    0 10px
+  );
+  box-shadow:
+    inset 0 0 0 2px #ffb52e,                    /* gold frame, clipped to octagon */
+    inset 0 0 18px rgba(255, 60, 90, .45),
+    0 0 14px rgba(200, 30, 58, .55);
+  text-shadow:
+    0 0 8px rgba(255, 60, 90, .85),
+    0 2px 0 #000;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .08s ease-out, transform .06s ease-out;
+}
+button:hover { filter: brightness(1.12); }
+
+button:active,
+button.is-active {
+  color: #1a0d00;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .55), transparent 45%),
+    linear-gradient(180deg, #ffd34d 0%, #f2a400 50%, #c87a00 100%);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, .55),
+    0 0 10px rgba(255, 210, 80, .9);
+  box-shadow:
+    inset 0 0 0 2px #fff2c2,
+    inset 0 0 20px rgba(255, 240, 180, .65),
+    0 0 22px rgba(255, 180, 40, .75);
+  transform: translateY(2px) scale(.98);
+  filter: brightness(1.05);
+}
+
+/* Small square variants (rotate buttons, 1–5 fatigue scale) */
+#btnRotL, #btnRotR {
+  min-width: 52px;
+  padding: 14px 12px;
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.panel .scale button {
+  min-width: 46px;
+  padding: 12px 14px;
+  font-size: 16px;
+  letter-spacing: .02em;
+}
+
+/* Download buttons: gold variant, visually distinct from the red actions */
+#btnCSV, #btnCSV2 {
+  color: #1a0d00;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .35), transparent 45%),
+    linear-gradient(180deg, #7a4a00 0%, #c88a00 45%, #6b3d00 100%);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .55);
+  box-shadow:
+    inset 0 0 0 2px #ffe27a,
+    inset 0 0 18px rgba(255, 240, 180, .45),
+    0 0 16px rgba(255, 180, 40, .55);
+}
+#btnCSV:active, #btnCSV2:active {
+  color: #1a0d00;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .6), transparent 45%),
+    linear-gradient(180deg, #fff0a8 0%, #ffc933 50%, #b87600 100%);
+  box-shadow:
+    inset 0 0 0 2px #fffbe0,
+    inset 0 0 22px rgba(255, 245, 200, .75),
+    0 0 24px rgba(255, 210, 80, .85);
+}
+
+/* ============================================================
+   Panels (fatigue question, post-session)
+   ============================================================ */
+.panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(200, 30, 58, .38), transparent 70%),
+    linear-gradient(180deg, rgba(18, 4, 6, .97), rgba(6, 2, 4, .97));
+  color: #f2e6c4;
+  border: 1px solid #c81e3a;
+  border-radius: 3px;
+  padding: 22px 26px;
+  text-align: center;
+  display: none;
+  min-width: 280px;
+  max-width: 88vw;
+  box-shadow:
+    0 0 30px rgba(200, 30, 58, .55),
+    inset 0 0 22px rgba(200, 30, 58, .22),
+    0 10px 40px rgba(0, 0, 0, .8);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+.panel p {
+  margin: 0 0 14px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.panel strong {
+  color: #ffe27a;
+  letter-spacing: .14em;
+  text-shadow: 0 0 10px rgba(255, 60, 90, .75), 0 2px 0 #000;
+}
+.panel .scale {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.panel .hint {
+  font-size: 11px;
+  color: #a08a5a;
+  margin: 14px 0 0;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+/* ============================================================
+   Setup screen
+   ============================================================ */
+#setup {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(200, 30, 58, .38), transparent 62%),
+    radial-gradient(ellipse at 50% 110%, rgba(255, 160, 0, .14), transparent 70%),
+    #050505;
+  color: #f2e6c4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  text-align: center;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  letter-spacing: .05em;
+}
+#setup h2 {
+  font-family: 'Black Ops One', 'Impact', 'Arial Black', sans-serif;
+  font-size: clamp(24px, 6.5vw, 36px);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #ffe27a;
+  margin: 0;
+  text-shadow:
+    0 0 12px rgba(255, 60, 90, .9),
+    0 0 30px rgba(200, 30, 58, .7),
+    0 3px 0 #000;
+}
+#setup p {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 13px;
+  color: #d8c48c;
+}
+#setup input,
+#setup select {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: .06em;
+  padding: 8px 12px;
+  min-width: 200px;
+  background: #0a0a0a;
+  color: #ffe27a;
+  border: 1px solid #c81e3a;
+  border-radius: 0;
+  outline: none;
+  box-shadow: inset 0 0 10px rgba(200, 30, 58, .25);
+}
+#setup input:focus,
+#setup select:focus {
+  border-color: #ffe27a;
+  box-shadow:
+    inset 0 0 10px rgba(255, 210, 80, .35),
+    0 0 10px rgba(255, 180, 40, .45);
+}
+#setup select option {
+  background: #0a0a0a;
+  color: #ffe27a;
+}
+#setup #startBtn {
+  font-size: 20px;
+  padding: 16px 38px;
+  margin-top: 10px;
+}
+#setup p:last-child {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px !important;
+  color: #a08a5a !important;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  max-width: 320px;
+}
