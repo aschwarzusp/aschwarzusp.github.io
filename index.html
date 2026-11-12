@@ -7,33 +7,41 @@
 <style>
   html, body { margin:0; padding:0; overflow:hidden; width:100%; height:100%;
                font-family: system-ui, sans-serif; background:#000; }
-  /* Overlay shown inside the AR session (dom-overlay) */
-  #overlay { position:fixed; inset:0; pointer-events:none; }
-  #hud {
-    position:absolute; top:10px; left:10px; right:10px;
-    color:#fff; background:rgba(0,0,0,.55); padding:8px 10px;
-    border-radius:8px; font-size:13px; line-height:1.4;
-  }
-  #msg {
-    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    color:#fff; background:rgba(0,0,0,.65); padding:10px 16px;
-    border-radius:10px; font-size:16px; display:none; text-align:center;
-  }
-  #controls {
-    position:absolute; bottom:14px; left:0; right:0;
-    display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
-    pointer-events:auto; /* buttons receive touches, rest of overlay lets them through */
-  }
-  button {
-    pointer-events:auto; font-size:15px; padding:12px 16px;
-    border:none; border-radius:10px; background:rgba(255,255,255,.92); color:#111;
-    touch-action:none; user-select:none;
-  }
+
+  /* dom-overlay root. Kept below #setup (z-index) so the setup screen stays clickable. */
+  #overlay { position:fixed; inset:0; z-index:1; pointer-events:auto;
+             touch-action:none; -webkit-user-select:none; user-select:none; }
+
+  #hud { position:absolute; top:10px; left:10px; right:10px;
+         color:#fff; background:rgba(0,0,0,.55); padding:8px 10px;
+         border-radius:8px; font-size:13px; line-height:1.4; white-space:pre-line; }
+
+  #msg { position:absolute; top:42%; left:50%; transform:translate(-50%,-50%);
+         color:#fff; background:rgba(0,0,0,.72); padding:10px 16px;
+         border-radius:10px; font-size:16px; display:none; text-align:center;
+         pointer-events:none; }
+
+  #controls { position:absolute; bottom:14px; left:0; right:0;
+              display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+
+  button { font-size:15px; padding:12px 16px; border:none; border-radius:10px;
+           background:rgba(255,255,255,.92); color:#111;
+           touch-action:none; -webkit-user-select:none; user-select:none; }
   button:active { background:#6d4aff; color:#fff; }
-  #setup { position:fixed; inset:0; background:#111; color:#eee;
+
+  .panel { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+           background:rgba(20,20,24,.96); color:#eee; border-radius:14px;
+           padding:18px 20px; text-align:center; display:none; min-width:270px;
+           box-shadow:0 8px 30px rgba(0,0,0,.6); }
+  .panel p { margin:0 0 12px; }
+  .panel .scale { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .panel .hint { font-size:12px; color:#aaa; margin:12px 0 0; }
+
+  #setup { position:fixed; inset:0; z-index:10; background:#111; color:#eee;
            display:flex; flex-direction:column; align-items:center;
            justify-content:center; gap:14px; padding:20px; text-align:center; }
   #setup input, #setup select { font-size:16px; padding:8px; border-radius:8px; }
+  #setup p { margin:0; }
 </style>
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.166.1/build/three.module.js" } }
@@ -41,6 +49,7 @@
 </head>
 <body>
 
+<!-- ============ setup (outside the AR overlay) ============ -->
 <div id="setup">
   <h2>A4 — Mobile AR Docking</h2>
   <p>ID do participante:<br><input id="pid" value="P1"></p>
@@ -51,364 +60,632 @@
      </select>
   </p>
   <button id="startBtn">Iniciar AR</button>
-  <p style="font-size:12px;color:#aaa">Requer Chrome Android com "Google Play Services for AR".</p>
+  <p style="font-size:12px;color:#aaa">
+    Requer Chrome Android com “Google Play Services for AR”.<br>
+    Coloque o telemóvel sobre uma mesa bem iluminada antes de tocar em Iniciar.
+  </p>
 </div>
 
-<!-- This whole div becomes the DOM overlay inside the AR session -->
+<!-- ============ dom-overlay root for the AR session ============ -->
 <div id="overlay">
-  <div id="hud">Aponte o telefone para uma superfície horizontal…</div>
+  <div id="hud">Aponte o telemóvel para uma superfície horizontal…</div>
   <div id="msg"></div>
+
   <div id="controls">
-    <button id="btnCarry" style="display:none">🖐️ Carregar</button>
-    <button id="btnRotL" style="display:none">↺</button>
-    <button id="btnRotR" style="display:none">↻</button>
+    <button id="btnCarry" style="display:none">🖐️ Carregar (segure)</button>
+    <button id="btnRotL"  style="display:none">↺</button>
+    <button id="btnRotR"  style="display:none">↻</button>
+    <button id="btnCSV"   style="display:none">⬇ Baixar CSV</button>
+    <button id="btnEnd"   style="display:none">Sair</button>
+  </div>
+
+  <!-- post-technique fatigue question (1–5) -->
+  <div id="fatigue" class="panel">
+    <p id="fatigueQ">Quão cansados estão os seus braços?</p>
+    <div class="scale">
+      <button data-val="1">1</button>
+      <button data-val="2">2</button>
+      <button data-val="3">3</button>
+      <button data-val="4">4</button>
+      <button data-val="5">5</button>
+    </div>
+    <p class="hint">1 = nada cansado · 5 = muito cansado</p>
+  </div>
+
+  <!-- shown after the AR session ends (data is NOT lost) -->
+  <div id="post" class="panel">
+    <p><strong>Sessão concluída</strong></p>
+    <p id="postInfo"></p>
+    <div class="scale">
+      <button id="btnCSV2">⬇ Baixar CSV</button>
+      <button id="btnReload">Nova sessão</button>
+    </div>
   </div>
 </div>
 
 <script type="module">
 import * as THREE from 'three';
 
-/* ---------------- scene ---------------- */
-const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(innerWidth, innerHeight);
+/* ============================================================
+   Renderer / scene
+   ============================================================ */
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType('local');
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
-const dir = new THREE.DirectionalLight(0xffffff, 1.0);
-dir.position.set(1, 3, 1);
-scene.add(dir);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.6));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+dirLight.position.set(1, 3, 1);
+scene.add(dirLight);
 
-const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.01, 20);
+// fallback (non-XR) camera; never used for raycasting during the session
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+// camera proxy kept in sync with the XR view each frame, used for touch rays
+const rayCam = new THREE.PerspectiveCamera();
+rayCam.matrixAutoUpdate = false;
+rayCam.matrixWorldAutoUpdate = false;
 
 const reticle = new THREE.Mesh(
-  new THREE.RingGeometry(0.045, 0.055, 32).rotateX(-Math.PI/2),
-  new THREE.MeshBasicMaterial({ color:0xffffff })
+  new THREE.RingGeometry(0.045, 0.055, 32).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })
 );
 reticle.matrixAutoUpdate = false;
 reticle.visible = false;
 scene.add(reticle);
 
-/* ---------------- experiment state ---------------- */
+/* ============================================================
+   Experiment constants / state
+   ============================================================ */
 const COLORS = [
-  { name:'vermelho', hex:0xff3b30 },
-  { name:'verde',    hex:0x34c759 },
-  { name:'azul',     hex:0x2f6bff },
+  { name: 'vermelho', hex: 0xff3b30 },
+  { name: 'verde',    hex: 0x34c759 },
+  { name: 'azul',     hex: 0x2f6bff },
 ];
-const POS_TOL_M = 0.02;            // 2 cm
-const YAW_TOL_DEG = 10;            // 10 degrees
+const POS_TOL_M      = 0.02;   // 2 cm
+const YAW_TOL_DEG    = 10;     // 10 degrees
 const TRIALS_PER_TECH = 3;
+const MAX_DRAG_M     = 1.2;    // clamp so a grazing ray cannot fling the object away
+const LABEL          = { touch: 'gestos de toque', carry: 'carregar' };
+const CSV_FIELDS = ['participant_id', 'technique', 'trial', 'completion_time_s',
+                    'pos_error_cm', 'yaw_error_deg', 'wrong_selections',
+                    'touch_count', 'tracking_lost', 'arm_fatigue'];
 
-let session = null, hitTestSource = null;
-let state = 'PLACE';               // PLACE -> SELECT -> DOCK -> BETWEEN
-let technique = 'touch';           // 'touch' | 'carry'
+let session = null;
+let hitTestSource = null;
+
+let state = 'SETUP';               // SETUP | PLACE | SELECT | DOCK | BETWEEN | FATIGUE | DONE
+let techniques = ['touch', 'carry'];
+let techIndex = 0;
+let technique = 'touch';
+let trialNum = 1;
 let participant = 'P1';
-let trialNum = 1;                  // within current technique
-let trialsDone = 0;
-let anchorPos = null;              // Point on the real surface where the workspace lives
+
+let anchorPos = null;
 let surfaceY = 0;
-let ghost = null, ghostColor = null, ghostYaw = 0;
-let candidates = [], selected = null;
-let wrongSelections = 0, touchCount = 0, trackingLost = 0;
+let ghost = null, ghostColor = null;
+let candidates = [];
+let selected = null;
+
+let wrongSelections = 0;
+let touchCount = 0;
+let trackingLost = 0;
+let trialActive = false;           // true from workspace spawn until dock
+let trialStartTime = 0;            // set when the correct object is selected
 let hadHitLastFrame = false;
-let trialStartTime = 0;
+
 let csvRows = [];
-let fatigue = {};                  // { participantId: { technique: rating } }
-let rotRepeat = null;
+const fatigue = {};                // { technique: 1..5 } — one participant per page load
+
 let carryActive = false;
 let lastCarryPoint = null;
 
 const $ = id => document.getElementById(id);
 const hud = $('hud'), msgBox = $('msg');
 
-/* ---------------- CSV instrumentation ---------------- */
-function logTrial() {
-  const posErr = posErrorM() * 100;
-  const yawErr = Math.abs(yawErrorDeg());
-  csvRows.push({
-    participant_id: participant,
-    technique,
-    trial: trialNum,
-    completion_time_s: ((performance.now() - trialStartTime)/1000).toFixed(2),
-    pos_error_cm: posErr.toFixed(2),
-    yaw_error_deg: yawErr.toFixed(2),
-    wrong_selections,
-    touch_count,
-    tracking_lost,
-    arm_fatigue: (fatigue[participant] && fatigue[participant][technique]) ?? ''
-  });
-}
-function exportCSV() {
-  const head = Object.keys(csvRows[0]).join(',');
-  const body = csvRows.map(r => Object.values(r).join(',')).join('\n');
-  const blob = new Blob([head + '\n' + body], { type:'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `mac0623_a4_${participant}.csv`;
-  a.click();
-}
-
-/* ---------------- helpers ---------------- */
-function rayFromClient(cx, cy) {
-  const ndc = new THREE.Vector2((cx/innerWidth)*2-1, -(cy/innerHeight)*2+1);
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(ndc, renderer.xr.getCamera());
-  return raycaster.ray.clone();
-}
-function surfacePoint(ray) { // intersect a touch ray with the horizontal plane y=surfaceY
-  if (!anchorPos) return null;
-  const plane = new THREE.Plane(new THREE.Vector3(0,1,0), -surfaceY);
-  const p = new THREE.Vector3();
-  return ray.intersectPlane(plane, p) ? p : null;
-}
-function posErrorM() {
-  if (!selected || !ghost) return 0;
-  const dx = selected.position.x - ghost.position.x;
-  const dz = selected.position.z - ghost.position.z;
-  return Math.hypot(dx, dz);
-}
-function yawErrorDeg() {
-  if (!selected || !ghost) return 0;
-  let d = (selected.rotation.y - ghostYaw) % (2*Math.PI);
-  if (d > Math.PI) d -= 2*Math.PI;
-  if (d < -Math.PI) d += 2*Math.PI;
-  return THREE.MathUtils.radToDeg(d);
-}
-function flash(text, ms=1400) {
+/* ============================================================
+   Small helpers
+   ============================================================ */
+function flash(text, ms = 1400) {
   msgBox.textContent = text;
   msgBox.style.display = 'block';
   clearTimeout(flash._t);
-  flash._t = setTimeout(() => msgBox.style.display='none', ms);
+  flash._t = setTimeout(() => { msgBox.style.display = 'none'; }, ms);
+}
+function isUI(el) {
+  return el instanceof Element && !!el.closest('button, .panel');
+}
+function yawErrorRad() {
+  if (!selected || !ghost) return 0;
+  const d = selected.rotation.y - ghost.rotation.y;
+  return Math.atan2(Math.sin(d), Math.cos(d));   // wrap to [-PI, PI]
+}
+function posErrorM() {
+  if (!selected || !ghost) return 0;
+  return Math.hypot(selected.position.x - ghost.position.x,
+                    selected.position.z - ghost.position.z);
 }
 
-/* ---------------- workspace: ghost + candidates ---------------- */
-function makeMesh(colorHex, ghosty) {
-  const mat = ghosty
-    ? new THREE.MeshBasicMaterial({ color:colorHex, transparent:true, opacity:0.35 })
-    : new THREE.MeshLambertMaterial({ color:colorHex });
-  return new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.07, 24), mat);
+/* Camera used to cast touch rays: the XR view camera. */
+function syncRayCam() {
+  const xrCam = renderer.xr.getCamera();
+  const src = (xrCam.cameras && xrCam.cameras.length) ? xrCam.cameras[0] : xrCam;
+  rayCam.matrixWorld.copy(src.matrixWorld);
+  rayCam.projectionMatrix.copy(src.projectionMatrix);
+  rayCam.projectionMatrixInverse.copy(src.projectionMatrix).invert();
+  rayCam.near = src.near; rayCam.far = src.far;
+  rayCam.fov = src.fov;   rayCam.aspect = src.aspect;
 }
+function rayFromClient(cx, cy) {
+  const w = window.innerWidth, h = window.innerHeight;
+  const ndc = new THREE.Vector2((cx / w) * 2 - 1, -(cy / h) * 2 + 1);
+  const rc = new THREE.Raycaster();
+  rc.setFromCamera(ndc, rayCam);
+  return rc.ray;
+}
+
+/* ============================================================
+   Workspace geometry — asymmetric arrow so yaw is visible
+   (a cylinder / box is rotationally ambiguous; an arrow is not)
+   ============================================================ */
+const ARROW_GEO = (() => {
+  const s = new THREE.Shape();
+  s.moveTo(  0.000,  0.065);   // tip
+  s.lineTo(  0.050, -0.015);
+  s.lineTo(  0.018, -0.015);
+  s.lineTo(  0.018, -0.060);
+  s.lineTo( -0.018, -0.060);
+  s.lineTo( -0.018, -0.015);
+  s.lineTo( -0.050, -0.015);
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: 0.06, bevelEnabled: false, curveSegments: 1 });
+  g.rotateX(-Math.PI / 2);     // shape +Y -> world -Z, extrusion -> world +Y (0..0.06)
+  g.computeVertexNormals();
+  return g;
+})();
+
+function makeMesh(hex, isGhost) {
+  const mat = isGhost
+    ? new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.35, depthWrite: false })
+    : new THREE.MeshLambertMaterial({ color: hex });
+  return new THREE.Mesh(ARROW_GEO, mat);
+}
+
 function clearWorkspace() {
-  for (const m of [ghost, ...candidates]) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }
+  for (const m of [ghost, ...candidates]) {
+    if (!m) continue;
+    scene.remove(m);
+    m.material.dispose();          // geometry is shared — do NOT dispose it here
+  }
   ghost = null; candidates = []; selected = null;
 }
+
 function spawnWorkspace(center) {
   clearWorkspace();
   anchorPos = center.clone();
   surfaceY = center.y;
 
-  // target: random yaw, one of the three colors, translucent ghost
-  ghostColor = COLORS[Math.floor(Math.random()*COLORS.length)];
-  ghostYaw = Math.random()*Math.PI*2;
+  /* --- target (translucent ghost, random yaw) --- */
+  ghostColor = COLORS[(Math.random() * COLORS.length) | 0];
   ghost = makeMesh(ghostColor.hex, true);
-  ghost.position.copy(center);
+  ghost.position.set(center.x, surfaceY, center.z);
+  ghost.rotation.y = Math.random() * Math.PI * 2;     // <-- the yaw target is now applied
   scene.add(ghost);
 
-  // 3 candidates 30–50 cm away on the same surface, rotated randomly
-  const shuffled = [...COLORS].sort(() => Math.random()-0.5);
-  const baseAngle = Math.random()*Math.PI*2;
+  /* --- three candidates, 30–50 cm away, each with a different starting yaw --- */
+  const shuffled = COLORS.slice().sort(() => Math.random() - 0.5);
+  const baseAngle = Math.random() * Math.PI * 2;
   shuffled.forEach((c, i) => {
-    const ang = baseAngle + i*(2*Math.PI/3);
-    const r = 0.30 + Math.random()*0.20;
+    const ang = baseAngle + i * (2 * Math.PI / 3);
+    const r = 0.30 + Math.random() * 0.20;
     const m = makeMesh(c.hex, false);
     m.userData.colorName = c.name;
-    m.position.set(center.x + Math.cos(ang)*r, surfaceY + 0.035, center.z + Math.sin(ang)*r);
-    m.rotation.y = Math.random()*Math.PI*2;
+    m.position.set(center.x + Math.cos(ang) * r, surfaceY, center.z + Math.sin(ang) * r);
+
+    let yaw = Math.random() * Math.PI * 2;
+    let d = Math.atan2(Math.sin(yaw - ghost.rotation.y), Math.cos(yaw - ghost.rotation.y));
+    if (Math.abs(d) < Math.PI / 4) yaw += Math.PI / 2;   // never start almost docked
+    m.rotation.y = yaw;
+
     scene.add(m);
     candidates.push(m);
   });
 
-  wrongSelections = 0; touchCount = 0;
+  wrongSelections = 0;
+  touchCount = 0;
+  trackingLost = 0;
+  trialActive = true;
   state = 'SELECT';
   updateButtons();
 }
 
-function nextTrialOrTechnique() {
-  trialsDone++;
-  if (trialsDone >= TRIALS_PER_TECH) {
-    const q = `Participante ${participant}: quão cansados estão os seus braços após "${technique}"? (1–5)`;
-    const val = prompt(q);
-    fatigue[participant] = fatigue[participant] || {};
-    fatigue[participant][technique] = val;
-    if (trialNum >= TRIALS_PER_TECH && technique === ($('firstTech').value)) {
-      // switch to the other technique (counterbalanced ABBA within the session)
-      technique = technique === 'touch' ? 'carry' : 'touch';
-      trialNum = 1;
-      state = 'SELECT';
-      spawnWorkspace(anchorPos);
-      flash(`Nova técnica: ${technique}`, 2500);
-    } else {
-      exportCSV();
-      flash('Sessão concluída. CSV baixado.', 4000);
-      state = 'DONE';
-    }
-  } else {
-    trialNum++;
-    state = 'SELECT';
-    // keep the anchor, re-randomize the target yaw and the candidates
-    spawnWorkspace(anchorPos);
-  }
-  updateButtons();
+/* ============================================================
+   Trial flow
+   ============================================================ */
+function logTrial() {
+  csvRows.push({
+    participant_id:    participant,
+    technique,
+    trial:             trialNum,
+    completion_time_s: ((performance.now() - trialStartTime) / 1000).toFixed(2),
+    pos_error_cm:      (posErrorM() * 100).toFixed(2),
+    yaw_error_deg:     Math.abs(THREE.MathUtils.radToDeg(yawErrorRad())).toFixed(2),
+    wrong_selections:  wrongSelections,
+    touch_count:       touchCount,
+    tracking_lost:     trackingLost,
+    arm_fatigue:       ''            // joined at export time
+  });
 }
 
-/* ---------------- selection & gestures (touch events) ---------------- */
-const activeTouches = new Map(); // pointerId -> {x,y}
+function dockSuccess() {
+  trialActive = false;
+  carryActive = false;
+  logTrial();
+
+  selected.material.emissive.set(0x00c000);
+  selected.material.emissiveIntensity = 0.9;
+
+  flash('✔ Encaixado!', 1200);
+  state = 'BETWEEN';
+  updateButtons();
+  hud.textContent = 'Encaixado! A preparar a próxima tentativa…';
+
+  setTimeout(() => { if (state === 'BETWEEN') nextTrialOrTechnique(); }, 1400);
+}
+
+function nextTrialOrTechnique() {
+  if (trialNum < TRIALS_PER_TECH) {
+    trialNum++;
+    spawnWorkspace(anchorPos);
+    flash(`Tentativa ${trialNum}/${TRIALS_PER_TECH}`, 900);
+    return;
+  }
+  // finished all trials of the current technique -> fatigue question
+  state = 'FATIGUE';
+  updateButtons();
+  askFatigue(fatigueDone);
+}
+
+function fatigueDone(rating) {
+  fatigue[technique] = rating;
+
+  if (techIndex + 1 < techniques.length) {
+    techIndex++;
+    technique = techniques[techIndex];
+    trialNum = 1;                       // <-- per-technique counter, reset on switch
+    spawnWorkspace(anchorPos);
+    flash(`Nova técnica: ${LABEL[technique]}`, 2500);
+  } else {
+    state = 'DONE';
+    updateButtons();
+    hud.textContent = 'Sessão concluída. Toque em “⬇ Baixar CSV”.';
+    flash('Sessão concluída — obrigado!', 4000);
+  }
+}
+
+/* fatigue question rendered in the DOM overlay (never prompt()) */
+let fatigueCb = null;
+function askFatigue(cb) {
+  fatigueCb = cb;
+  $('fatigueQ').textContent =
+    `Quão cansados estão os seus braços após a técnica “${LABEL[technique]}”?`;
+  $('fatigue').style.display = 'block';
+}
+document.querySelectorAll('#fatigue button').forEach(b => {
+  b.addEventListener('click', () => {
+    const v = Number(b.dataset.val);
+    $('fatigue').style.display = 'none';
+    const cb = fatigueCb; fatigueCb = null;
+    if (cb) cb(v);
+  });
+});
+
+/* ============================================================
+   CSV export (fatigue joined here — it is only known after a technique)
+   ============================================================ */
+function exportCSV() {
+  if (!csvRows.length) { flash('Nenhum dado para exportar.', 1500); return; }
+
+  const lines = [CSV_FIELDS.join(',')];
+  for (const row of csvRows) {
+    lines.push(CSV_FIELDS.map(f => {
+      if (f === 'arm_fatigue') {
+        const v = fatigue[row.technique];
+        return (v === undefined || v === null) ? '' : v;
+      }
+      return row[f];
+    }).join(','));
+  }
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mac0623_a4_${participant}_${Date.now()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  flash('CSV gerado.', 1500);
+}
+
+/* ============================================================
+   Pointer input (listeners on the dom-overlay root)
+   ============================================================ */
+const overlayEl = $('overlay');
+const touches = new Map();     // pointerId -> {x, y}
+let twistAng = null;
+
+overlayEl.addEventListener('pointerdown', onPointerDown);
+overlayEl.addEventListener('pointermove', onPointerMove);
+overlayEl.addEventListener('pointerup',   onPointerUp);
+overlayEl.addEventListener('pointercancel', onPointerUp);
 
 function onPointerDown(e) {
-  if (e.target.closest('button')) return;   // ignore UI buttons
-  activeTouches.set(e.pointerId, { x:e.clientX, y:e.clientY });
-  touchCount++;
+  if (isUI(e.target)) return;
 
-  if (state === 'PLACE' && reticle.visible) {
-    spawnWorkspace(new THREE.Vector3().setFromMatrixPosition(reticle.matrix));
-    flash('Selecione o objeto da mesma cor do fantasma');
-  } else if (state === 'SELECT') {
-    const ray = rayFromClient(e.clientX, e.clientY);
-    const hits = new THREE.Raycaster().setFromCamera(
-      new THREE.Vector2((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1),
-      renderer.xr.getCamera()
-    ).intersectObjects(candidates);
-    if (hits.length) {
-      const obj = hits[0].object;
-      if (obj.userData.colorName === ghostColor.name) {
-        selected = obj;
-        selected.material.emissive = new THREE.Color(0x554400);
-        trialStartTime = performance.now();
-        state = 'DOCK';
-        updateButtons();
-        flash('Encaixe no fantasma!', 1200);
-      } else {
-        wrongSelections++;
-        flash('Cor errada!', 800);
-      }
-    }
+  if (trialActive) touchCount++;
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (state === 'PLACE') {
+    if (!reticle.visible) { flash('Aponte para uma superfície primeiro.', 1200); return; }
+    const p = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
+    spawnWorkspace(p);
+    flash('Toque no objeto da MESMA cor do fantasma.', 2000);
+    return;
+  }
+
+  if (state === 'SELECT') {
+    trySelect(e.clientX, e.clientY);
+    return;
+  }
+
+  if (state === 'DOCK' && technique === 'touch' && selected && touches.size === 1) {
+    moveSelectedTo(e.clientX, e.clientY);
   }
 }
-function onPointerMove(e) {
-  if (!activeTouches.has(e.pointerId)) return;
-  activeTouches.set(e.pointerId, { x:e.clientX, y:e.clientY });
 
-  // Technique 1: one-finger drag -> move on the surface plane
-  if (technique === 'touch' && state === 'DOCK' && activeTouches.size === 1 && selected) {
-    const p = surfacePoint(rayFromClient(e.clientX, e.clientY));
-    if (p) { selected.position.x = p.x; selected.position.z = p.z; }
-  }
-  // Technique 1: two-finger twist -> yaw
-  if (technique === 'touch' && state === 'DOCK' && activeTouches.size === 2 && selected) {
-    const [a, b] = [...activeTouches.values()];
-    const ang = Math.atan2(b.y-a.y, b.x-a.x);
-    if (onPointerMove.lastAng !== undefined) {
-      let d = ang - onPointerMove.lastAng;
-      if (d > Math.PI) d -= 2*Math.PI;
-      if (d < -Math.PI) d += 2*Math.PI;
-      selected.rotation.y -= d;
-    }
-    onPointerMove.lastAng = ang;
+function trySelect(cx, cy) {
+  const ray = rayFromClient(cx, cy);
+  const hits = new THREE.Raycaster(ray.origin, ray.direction).intersectObjects(candidates, false);
+  if (!hits.length) return;
+
+  const obj = hits[0].object;
+  if (obj.userData.colorName === ghostColor.name) {
+    selected = obj;
+    obj.material.emissive.set(0x664400);        // clear selection highlight
+    trialStartTime = performance.now();
+    state = 'DOCK';
+    updateButtons();
+    flash('Encaixe no fantasma!', 1200);
   } else {
-    onPointerMove.lastAng = undefined;
+    wrongSelections++;
+    flash('Cor errada!', 800);
   }
 }
-function onPointerUp(e) { activeTouches.delete(e.pointerId); }
 
-document.body.addEventListener('pointerdown', onPointerDown);
-document.body.addEventListener('pointermove', onPointerMove);
-document.body.addEventListener('pointerup', onPointerUp);
-document.body.addEventListener('pointercancel', onPointerUp);
+function onPointerMove(e) {
+  if (!touches.has(e.pointerId)) return;
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-/* ---------------- Technique 2: carry + separated rotation ---------------- */
+  if (state !== 'DOCK' || technique !== 'touch' || !selected) { twistAng = null; return; }
+
+  if (touches.size === 1) {
+    moveSelectedTo(e.clientX, e.clientY);
+    twistAng = null;
+  } else if (touches.size === 2) {
+    const [a, b] = [...touches.values()];
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);   // screen space, y down -> clockwise positive
+    if (twistAng !== null) {
+      let d = ang - twistAng;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      selected.rotation.y -= d;                     // clockwise on screen = -Y in world
+    }
+    twistAng = ang;
+  }
+}
+
+function onPointerUp(e) {
+  touches.delete(e.pointerId);
+  if (touches.size < 2) twistAng = null;
+}
+
+function moveSelectedTo(cx, cy) {
+  if (!selected) return;
+  const ray = rayFromClient(cx, cy);
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -surfaceY);
+  const p = new THREE.Vector3();
+  if (!ray.intersectPlane(plane, p)) return;
+
+  // clamp around the workspace so a grazing ray cannot fling the object away
+  const dx = p.x - anchorPos.x, dz = p.z - anchorPos.z;
+  const d = Math.hypot(dx, dz);
+  if (d > MAX_DRAG_M) {
+    p.x = anchorPos.x + (dx / d) * MAX_DRAG_M;
+    p.z = anchorPos.z + (dz / d) * MAX_DRAG_M;
+  }
+  selected.position.x = p.x;
+  selected.position.z = p.z;
+}
+
+/* ============================================================
+   Technique 2 — carry + separated rotation
+   ============================================================ */
+let rotTimer = null;
+
 function updateButtons() {
-  const showCarry = (technique === 'carry' && state === 'DOCK');
-  $('btnCarry').style.display = showCarry ? '' : 'none';
-  $('btnRotL').style.display  = showCarry ? '' : 'none';
-  $('btnRotR').style.display  = showCarry ? '' : 'none';
-}
-$('btnCarry').addEventListener('pointerdown', () => carryActive = true);
-addEventListener('pointerup', () => carryActive = false);
-function rotateHeld(delta) {
-  const start = () => {
-    if (selected) selected.rotation.y += delta;
-    rotRepeat = setInterval(() => { if (selected) selected.rotation.y += delta; }, 150);
-  };
-  const stop = () => { clearInterval(rotRepeat); rotRepeat = null; };
-  return { pd: e => { e.preventDefault(); start(); }, pu: stop };
-}
-const rl = rotateHeld(+Math.PI/12), rr = rotateHeld(-Math.PI/12);
-$('btnRotL').addEventListener('pointerdown', rl.pd);
-addEventListener('pointerup', rl.pu);
-$('btnRotR').addEventListener('pointerdown', rr.pd);
-addEventListener('pointerup', rr.pu);
+  const carryUI = (technique === 'carry' && state === 'DOCK');
+  $('btnCarry').style.display = carryUI ? '' : 'none';
+  $('btnRotL').style.display  = carryUI ? '' : 'none';
+  $('btnRotR').style.display  = carryUI ? '' : 'none';
 
-/* ---------------- AR session ---------------- */
-$('startBtn').addEventListener('click', async () => {
-  participant = $('pid').value.trim() || 'P1';
-  technique = $('firstTech').value;
-  session = await navigator.xr.requestSession('immersive-ar', {
-    requiredFeatures: ['hit-test'],
-    optionalFeatures: ['dom-overlay'],
-    domOverlay: { root: $('overlay') }
-  });
-  $('setup').style.display = 'none';
+  const done = (state === 'DONE');
+  $('btnCSV').style.display = done ? '' : 'none';
+  $('btnEnd').style.display = done ? '' : 'none';
+}
+
+$('btnCarry').addEventListener('pointerdown', e => { e.preventDefault(); carryActive = true; });
+window.addEventListener('pointerup',     () => { carryActive = false; });
+window.addEventListener('pointercancel', () => { carryActive = false; });
+
+function startRot(sign) {
+  const step = () => { if (selected) selected.rotation.y += sign; };
+  step();
+  clearInterval(rotTimer);
+  rotTimer = setInterval(step, 120);
+}
+function stopRot() { clearInterval(rotTimer); rotTimer = null; }
+
+$('btnRotL').addEventListener('pointerdown', e => { e.preventDefault(); startRot(+Math.PI / 36); });
+$('btnRotR').addEventListener('pointerdown', e => { e.preventDefault(); startRot(-Math.PI / 36); });
+window.addEventListener('pointerup', stopRot);
+window.addEventListener('pointercancel', stopRot);
+
+/* ============================================================
+   AR session lifecycle
+   ============================================================ */
+$('startBtn').addEventListener('click', startAR);
+
+async function startAR() {
+  participant = ($('pid').value.trim() || 'P1');
+  const first = $('firstTech').value;
+
+  techniques = [first, first === 'touch' ? 'carry' : 'touch'];  // counterbalancing (ABBA)
+  techIndex  = 0;
+  technique  = techniques[0];
+  trialNum   = 1;
+  csvRows    = [];
+
+  if (!navigator.xr) { alert('WebXR não está disponível neste navegador.'); return; }
+
+  try {
+    session = await navigator.xr.requestSession('immersive-ar', {
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['dom-overlay'],
+      domOverlay: { root: overlayEl }
+    });
+  } catch (err) {
+    alert('Não foi possível iniciar a sessão AR: ' + (err && err.message ? err.message : err));
+    return;
+  }
+
+  // *** critical: bind the session to the renderer ***
+  await renderer.xr.setSession(session);
 
   const viewerSpace = await session.requestReferenceSpace('viewer');
   hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
-  session.addEventListener('end', () => { hitTestSource = null; location.reload(); });
-});
 
-/* ---------------- main loop ---------------- */
-renderer.setAnimationLoop((time, frame) => {
+  session.addEventListener('end', onSessionEnd);
+
+  $('setup').style.display = 'none';
+  state = 'PLACE';
+  hud.textContent = 'Aponte para uma superfície horizontal e toque para posicionar a tarefa.';
+  updateButtons();
+
+  renderer.setAnimationLoop(onFrame);
+}
+
+function onSessionEnd() {
+  hitTestSource = null;
+  session = null;
+  carryActive = false;
+  stopRot();
+  renderer.setAnimationLoop(null);       // do NOT reload — that would wipe csvRows
+
+  $('controls').style.display = 'none';
+  $('fatigue').style.display = 'none';
+  $('msg').style.display = 'none';
+  $('hud').textContent = '';
+  $('postInfo').textContent =
+    `Participante ${participant} — ${csvRows.length} tentativa(s) registada(s).`;
+  $('post').style.display = 'block';
+}
+
+$('btnCSV').addEventListener('click', exportCSV);
+$('btnCSV2').addEventListener('click', exportCSV);
+$('btnEnd').addEventListener('click', () => { if (session) session.end(); });
+$('btnReload').addEventListener('click', () => location.reload());
+
+/* ============================================================
+   Main loop
+   ============================================================ */
+function onFrame(time, frame) {
+  if (frame) syncRayCam();
+
+  /* ---- hit test ---- */
   if (frame && hitTestSource) {
     const refSpace = renderer.xr.getReferenceSpace();
-    const hits = frame.getHitTestResults(hitTestSource);
-    if (hits.length) {
-      const pose = hits[0].getPose(refSpace);
-      reticle.visible = true;
-      reticle.matrix.fromArray(pose.transform.matrix);
-      lastCarryPoint = new THREE.Vector3(
-        pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
-      hadHitLastFrame = true;
-    } else {
-      if (hadHitLastFrame && state !== 'PLACE' && state !== 'DONE') trackingLost++; // found -> lost transition
-      hadHitLastFrame = false;
+    const results = frame.getHitTestResults(hitTestSource);
+    let got = false;
+
+    if (results.length) {
+      const pose = results[0].getPose(refSpace);
+      if (pose) {
+        got = true;
+        reticle.visible = true;
+        reticle.matrix.fromArray(pose.transform.matrix);
+
+        if (!lastCarryPoint) lastCarryPoint = new THREE.Vector3();
+        lastCarryPoint.set(pose.transform.position.x,
+                           pose.transform.position.y,
+                           pose.transform.position.z);
+      }
+    }
+
+    if (!got) {
+      if (hadHitLastFrame && trialActive) trackingLost++;   // found -> lost transition
       if (state === 'PLACE') reticle.visible = false;
     }
+    hadHitLastFrame = got;
   }
 
-  // Technique 2: while "Carregar" is held, object follows the centre reticle on the surface
-  if (carryActive && selected && lastCarryPoint) {
+  /* ---- technique 2: object follows the centre hit point while held ---- */
+  if (carryActive && selected && state === 'DOCK' && lastCarryPoint) {
     selected.position.x = lastCarryPoint.x;
     selected.position.z = lastCarryPoint.z;
   }
 
-  // Docking check
-  if (state === 'DOCK' && selected) {
-    const pe = posErrorM(), ye = yawErrorDeg();
-    hud.textContent =
-      `Técnica: ${technique} | Tentativa ${trialNum}/${TRIALS_PER_TECH}\n` +
-      `Erro posição: ${(pe*100).toFixed(1)} cm (tol 2) | Erro rotação: ${Math.abs(ye).toFixed(0)}° (tol 10)`;
-    if (pe <= POS_TOL_M && Math.abs(ye) <= YAW_TOL_DEG) {
-      logTrial();
-      selected.material.emissive = new THREE.Color(0x00ff00);
-      selected.material.emissiveIntensity = 0.7;
-      flash('✔ Encaixado!');
-      state = 'BETWEEN';
-      setTimeout(nextTrialOrTechnique, 1500);
-    }
-  } else if (state === 'PLACE') {
-    hud.textContent = 'Aponte para uma superfície e toque para posicionar a tarefa.';
+  /* ---- HUD + dock check ---- */
+  if (state === 'PLACE') {
+    hud.textContent = 'Aponte para uma superfície horizontal e toque para posicionar a tarefa.';
+
   } else if (state === 'SELECT') {
-    hud.textContent = `Técnica: ${technique} | Tentativa ${trialNum}/${TRIALS_PER_TECH} — selecione o objeto da MESMA COR do fantasma.`;
+    hud.textContent =
+      `Técnica: ${LABEL[technique]}  |  Tentativa ${trialNum}/${TRIALS_PER_TECH}\n` +
+      `Selecione o objeto da MESMA cor do fantasma.`;
+
+  } else if (state === 'DOCK' && selected) {
+    const pe = posErrorM();
+    const yd = Math.abs(THREE.MathUtils.radToDeg(yawErrorRad()));
+    hud.textContent =
+      `Técnica: ${LABEL[technique]}  |  Tentativa ${trialNum}/${TRIALS_PER_TECH}\n` +
+      `Erro posição: ${(pe * 100).toFixed(1)} cm (tol ${POS_TOL_M * 100} cm)\n` +
+      `Erro rotação: ${yd.toFixed(0)}° (tol ${YAW_TOL_DEG}°)`;
+
+    if (pe <= POS_TOL_M && yd <= YAW_TOL_DEG) dockSuccess();
+
   } else if (state === 'DONE') {
-    hud.textContent = 'Sessão concluída. Obrigado!';
+    hud.textContent = 'Sessão concluída. Toque em “⬇ Baixar CSV”.';
   }
 
   renderer.render(scene, camera);
+}
+
+/* ============================================================
+   Resize
+   ============================================================ */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-exportCSV; // exposed in console for manual download if needed
+// manual download from the console if needed
 window.exportCSV = exportCSV;
 </script>
 </body>
 </html>
-
